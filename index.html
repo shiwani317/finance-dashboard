@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FinFlow Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f9f8f5;
+    --border: rgba(0,0,0,0.08);
+    --border-hover: rgba(0,0,0,0.15);
+    --text-primary: #1a1a18;
+    --text-secondary: #6b6b65;
+    --text-muted: #9b9b93;
+    --accent: #2d5a8e;
+    --accent-light: #e8eef6;
+    --green: #1d6b3a;
+    --green-light: #e6f4ec;
+    --red: #8b2020;
+    --red-light: #f8ecec;
+    --amber: #7a4f00;
+    --amber-light: #fdf3e0;
+    --purple: #4a1d8a;
+    --purple-light: #f0eafa;
+    --teal: #0f5e52;
+    --teal-light: #e3f4f1;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --transition: all 0.18s ease;
+  }
+  .dark {
+    --bg: #111110;
+    --surface: #1c1c1a;
+    --surface2: #242422;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.15);
+    --text-primary: #f0efe9;
+    --text-secondary: #9b9b93;
+    --text-muted: #6b6b65;
+    --accent: #5b8ec9;
+    --accent-light: #1a2535;
+    --green: #4ade80;
+    --green-light: #0f2a1a;
+    --red: #f87171;
+    --red-light: #2a0f0f;
+    --amber: #fbbf24;
+    --amber-light: #2a1f00;
+    --purple: #a78bfa;
+    --purple-light: #1e1030;
+    --teal: #2dd4bf;
+    --teal-light: #0a2420;
+  }
+  html, body, #root { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text-primary); font-size: 14px; line-height: 1.6; }
+  * { transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  input, select, button { font-family: inherit; font-size: 13px; color: var(--text-primary); }
+  button { cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback, createContext, useContext } = React;
+
+const AppContext = createContext(null);
+
+const CATEGORIES = ['Food & Dining','Shopping','Transport','Housing','Health','Entertainment','Salary','Freelance','Investment','Other'];
+const CAT_COLORS = {
+  'Food & Dining': '#e8704a','Shopping': '#5b8ec9','Transport': '#2d8a5e','Housing': '#8a4a9e',
+  'Health': '#c97c2a','Entertainment': '#4a7ec9','Salary': '#2d7a4a','Freelance': '#9e4a8a',
+  'Investment': '#4a9e7a','Other': '#7a7a7a'
+};
+
+const initialTransactions = [
+  { id:1, date:'2024-06-01', description:'Monthly Salary', amount:5200, type:'income', category:'Salary' },
+  { id:2, date:'2024-06-02', description:'Grocery Store', amount:148.50, type:'expense', category:'Food & Dining' },
+  { id:3, date:'2024-06-03', description:'Freelance Project Alpha', amount:1200, type:'income', category:'Freelance' },
+  { id:4, date:'2024-06-04', description:'Netflix Subscription', amount:15.99, type:'expense', category:'Entertainment' },
+  { id:5, date:'2024-06-05', description:'Uber Ride', amount:22.40, type:'expense', category:'Transport' },
+  { id:6, date:'2024-06-06', description:'Rent Payment', amount:1800, type:'expense', category:'Housing' },
+  { id:7, date:'2024-06-07', description:'Pharmacy', amount:34.20, type:'expense', category:'Health' },
+  { id:8, date:'2024-06-09', description:'Amazon Shopping', amount:89.99, type:'expense', category:'Shopping' },
+  { id:9, date:'2024-06-10', description:'Stock Dividend', amount:320, type:'income', category:'Investment' },
+  { id:10, date:'2024-06-11', description:'Restaurant Dinner', amount:67.80, type:'expense', category:'Food & Dining' },
+  { id:11, date:'2024-06-12', description:'Gym Membership', amount:45, type:'expense', category:'Health' },
+  { id:12, date:'2024-06-13', description:'Freelance Design', amount:800, type:'income', category:'Freelance' },
+  { id:13, date:'2024-06-15', description:'Electric Bill', amount:112, type:'expense', category:'Housing' },
+  { id:14, date:'2024-06-16', description:'Coffee Shop', amount:18.50, type:'expense', category:'Food & Dining' },
+  { id:15, date:'2024-06-18', description:'Clothing Purchase', amount:156.40, type:'expense', category:'Shopping' },
+  { id:16, date:'2024-06-19', description:'Bus Pass', amount:55, type:'expense', category:'Transport' },
+  { id:17, date:'2024-06-20', description:'Consulting Fee', amount:950, type:'income', category:'Freelance' },
+  { id:18, date:'2024-06-21', description:'Movie Tickets', amount:28.50, type:'expense', category:'Entertainment' },
+  { id:19, date:'2024-06-22', description:'Lunch Out', amount:24.75, type:'expense', category:'Food & Dining' },
+  { id:20, date:'2024-06-24', description:'Dental Checkup', amount:180, type:'expense', category:'Health' },
+  { id:21, date:'2024-06-25', description:'ETF Purchase', amount:500, type:'expense', category:'Investment' },
+  { id:22, date:'2024-06-26', description:'Side Project Income', amount:430, type:'income', category:'Freelance' },
+  { id:23, date:'2024-06-27', description:'Supermarket Run', amount:203.10, type:'expense', category:'Food & Dining' },
+  { id:24, date:'2024-06-28', description:'Spotify Premium', amount:9.99, type:'expense', category:'Entertainment' },
+  { id:25, date:'2024-06-29', description:'Taxi to Airport', amount:48, type:'expense', category:'Transport' },
+  { id:26, date:'2024-05-01', description:'Monthly Salary', amount:5200, type:'income', category:'Salary' },
+  { id:27, date:'2024-05-05', description:'Grocery Store', amount:162.30, type:'expense', category:'Food & Dining' },
+  { id:28, date:'2024-05-08', description:'Freelance Work', amount:1050, type:'income', category:'Freelance' },
+  { id:29, date:'2024-05-12', description:'Rent Payment', amount:1800, type:'expense', category:'Housing' },
+  { id:30, date:'2024-05-18', description:'Shopping Mall', amount:210, type:'expense', category:'Shopping' },
+  { id:31, date:'2024-04-01', description:'Monthly Salary', amount:5200, type:'income', category:'Salary' },
+  { id:32, date:'2024-04-07', description:'Investment Return', amount:280, type:'income', category:'Investment' },
+  { id:33, date:'2024-04-10', description:'Rent Payment', amount:1800, type:'expense', category:'Housing' },
+  { id:34, date:'2024-04-15', description:'Grocery Store', amount:141.60, type:'expense', category:'Food & Dining' },
+  { id:35, date:'2024-03-01', description:'Monthly Salary', amount:5000, type:'income', category:'Salary' },
+  { id:36, date:'2024-03-12', description:'Rent Payment', amount:1800, type:'expense', category:'Housing' },
+];
+
+const monthlyData = [
+  { month:'Jan', income:5200, expenses:3100 },
+  { month:'Feb', income:5200, expenses:3400 },
+  { month:'Mar', income:5000, expenses:2900 },
+  { month:'Apr', income:5480, expenses:3200 },
+  { month:'May', income:6250, expenses:3650 },
+  { month:'Jun', income:8900, expenses:3611 },
+];
+
+const fmt = (n) => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', minimumFractionDigits:2 }).format(n);
+const fmtShort = (n) => {
+  if (n >= 1000) return '$' + (n/1000).toFixed(1) + 'k';
+  return '$' + Math.round(n);
+};
+const fmtDate = (d) => new Date(d).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+
+function Badge({ type }) {
+  const isIncome = type === 'income';
+  return (
+    <span style={{
+      display:'inline-flex', alignItems:'center', gap:4, padding:'3px 10px',
+      borderRadius:99, fontSize:11, fontWeight:500, letterSpacing:'0.02em',
+      background: isIncome ? 'var(--green-light)' : 'var(--red-light)',
+      color: isIncome ? 'var(--green)' : 'var(--red)'
+    }}>
+      {isIncome ? '▲' : '▼'} {isIncome ? 'Income' : 'Expense'}
+    </span>
+  );
+}
+
+function CategoryDot({ cat }) {
+  return <span style={{ display:'inline-block', width:8, height:8, borderRadius:'50%', background:CAT_COLORS[cat]||'#999', marginRight:6 }} />;
+}
+
+function SummaryCard({ label, value, sub, color = 'var(--accent)', icon }) {
+  return (
+    <div style={{
+      background:'var(--surface)', borderRadius:'var(--radius)', border:'1px solid var(--border)',
+      padding:'20px 24px', display:'flex', flexDirection:'column', gap:8,
+      boxShadow:'var(--shadow)', minWidth:0
+    }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <span style={{ fontSize:12, fontWeight:500, color:'var(--text-secondary)', letterSpacing:'0.03em', textTransform:'uppercase' }}>{label}</span>
+        <span style={{ fontSize:18, opacity:0.7 }}>{icon}</span>
+      </div>
+      <div style={{ fontSize:28, fontWeight:600, color, letterSpacing:'-0.02em', fontFamily:'DM Mono, monospace' }}>{value}</div>
+      {sub && <div style={{ fontSize:12, color:'var(--text-muted)' }}>{sub}</div>}
+    </div>
+  );
+}
+
+function TrendChart({ isDark }) {
+  const ref = useRef(null);
+  const chartRef = useRef(null);
+  useEffect(() => {
+    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
+    if (!ref.current) return;
+    const textColor = isDark ? '#9b9b93' : '#6b6b65';
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    chartRef.current = new Chart(ref.current, {
+      type:'line',
+      data:{
+        labels: monthlyData.map(d=>d.month),
+        datasets:[
+          { label:'Income', data:monthlyData.map(d=>d.income), borderColor:'#2d8a5e', backgroundColor:'rgba(45,138,94,0.08)', tension:0.4, pointRadius:4, pointBackgroundColor:'#2d8a5e', borderWidth:2, fill:true },
+          { label:'Expenses', data:monthlyData.map(d=>d.expenses), borderColor:'#c05a3a', backgroundColor:'rgba(192,90,58,0.08)', tension:0.4, pointRadius:4, pointBackgroundColor:'#c05a3a', borderWidth:2, fill:true }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:ctx => ' '+fmt(ctx.raw) } } },
+        scales:{
+          x:{ grid:{ color:gridColor }, ticks:{ color:textColor, font:{size:12} } },
+          y:{ grid:{ color:gridColor }, ticks:{ color:textColor, font:{size:12}, callback:v=>fmtShort(v) }, beginAtZero:false }
+        }
+      }
+    });
+    return () => { if(chartRef.current) chartRef.current.destroy(); };
+  }, [isDark]);
+  return (
+    <div style={{ background:'var(--surface)', borderRadius:'var(--radius)', border:'1px solid var(--border)', padding:'20px 24px', boxShadow:'var(--shadow)' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+        <div>
+          <div style={{ fontWeight:600, fontSize:15, marginBottom:4 }}>Balance Trend</div>
+          <div style={{ fontSize:12, color:'var(--text-muted)' }}>Jan — Jun 2024</div>
+        </div>
+        <div style={{ display:'flex', gap:16 }}>
+          {[['Income','#2d8a5e'],['Expenses','#c05a3a']].map(([l,c])=>(
+            <div key={l} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:'var(--text-secondary)' }}>
+              <span style={{ width:24, height:3, background:c, borderRadius:99, display:'block' }}></span>{l}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ height:200 }}><canvas ref={ref} /></div>
+    </div>
+  );
+}
+
+function PieChart({ transactions, isDark }) {
+  const ref = useRef(null);
+  const chartRef = useRef(null);
+  const expTxns = transactions.filter(t=>t.type==='expense');
+  const catTotals = CATEGORIES.filter(c=>!['Salary','Freelance','Investment'].includes(c)).map(cat => ({
+    cat, total: expTxns.filter(t=>t.category===cat).reduce((s,t)=>s+t.amount,0)
+  })).filter(x=>x.total>0).sort((a,b)=>b.total-a.total).slice(0,6);
+
+  useEffect(() => {
+    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
+    if (!ref.current || !catTotals.length) return;
+    chartRef.current = new Chart(ref.current, {
+      type:'doughnut',
+      data:{ labels:catTotals.map(x=>x.cat), datasets:[{ data:catTotals.map(x=>x.total), backgroundColor:catTotals.map(x=>CAT_COLORS[x.cat]), borderWidth:0, hoverOffset:4 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:ctx=>` ${fmt(ctx.raw)}` } } } }
+    });
+    return ()=>{ if(chartRef.current) chartRef.current.destroy(); };
+  }, [isDark, JSON.stringify(catTotals)]);
+
+  return (
+    <div style={{ background:'var(--surface)', borderRadius:'var(--radius)', border:'1px solid var(--border)', padding:'20px 24px', boxShadow:'var(--shadow)' }}>
+      <div style={{ fontWeight:600, fontSize:15, marginBottom:4 }}>Spending Breakdown</div>
+      <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:16 }}>By category (expenses)</div>
+      <div style={{ display:'flex', gap:20, alignItems:'center', flexWrap:'wrap' }}>
+        <div style={{ height:160, width:160, flexShrink:0, position:'relative' }}>
+          {catTotals.length ? <canvas ref={ref} /> : <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'var(--text-muted)', fontSize:12 }}>No data</div>}
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:8, flex:1, minWidth:120 }}>
+          {catTotals.map(x=>(
+            <div key={x.cat} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:'var(--text-secondary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                <span style={{ width:10, height:10, borderRadius:3, background:CAT_COLORS[x.cat], flexShrink:0 }}></span>
+                {x.cat}
+              </div>
+              <span style={{ fontSize:12, fontFamily:'DM Mono', color:'var(--text-primary)', fontWeight:500 }}>{fmtShort(x.total)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TransactionModal({ tx, onClose, onSave, categories }) {
+  const [form, setForm] = useState(tx || { description:'', amount:'', type:'expense', category:'Food & Dining', date:new Date().toISOString().slice(0,10) });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const inputStyle = { width:'100%', padding:'9px 12px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:'var(--radius-sm)', color:'var(--text-primary)', fontSize:13, outline:'none' };
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{ background:'var(--surface)', borderRadius:'var(--radius)', border:'1px solid var(--border)', padding:'24px', width:'100%', maxWidth:420, boxShadow:'0 8px 40px rgba(0,0,0,0.15)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+          <h2 style={{ fontSize:16, fontWeight:600 }}>{tx ? 'Edit Transaction' : 'Add Transaction'}</h2>
+          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:18, color:'var(--text-secondary)', lineHeight:1 }}>✕</button>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <div><label style={{ fontSize:12, color:'var(--text-muted)', marginBottom:4, display:'block' }}>Description</label>
+            <input style={inputStyle} value={form.description} onChange={e=>set('description',e.target.value)} placeholder="e.g. Grocery Shopping" /></div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div><label style={{ fontSize:12, color:'var(--text-muted)', marginBottom:4, display:'block' }}>Amount ($)</label>
+              <input style={inputStyle} type="number" value={form.amount} onChange={e=>set('amount',e.target.value)} placeholder="0.00" /></div>
+            <div><label style={{ fontSize:12, color:'var(--text-muted)', marginBottom:4, display:'block' }}>Date</label>
+              <input style={inputStyle} type="date" value={form.date} onChange={e=>set('date',e.target.value)} /></div>
+          </div>
+          <div><label style={{ fontSize:12, color:'var(--text-muted)', marginBottom:4, display:'block' }}>Type</label>
+            <div style={{ display:'flex', gap:8 }}>
+              {['income','expense'].map(t=>(
+                <button key={t} onClick={()=>set('type',t)} style={{ flex:1, padding:'8px', borderRadius:'var(--radius-sm)', border:`1px solid ${form.type===t?'var(--accent)':'var(--border)'}`, background:form.type===t?'var(--accent-light)':'transparent', color:form.type===t?'var(--accent)':'var(--text-secondary)', fontWeight:form.type===t?500:400, fontSize:13, textTransform:'capitalize' }}>{t}</button>
+              ))}
+            </div></div>
+          <div><label style={{ fontSize:12, color:'var(--text-muted)', marginBottom:4, display:'block' }}>Category</label>
+            <select style={inputStyle} value={form.category} onChange={e=>set('category',e.target.value)}>
+              {categories.map(c=><option key={c} value={c}>{c}</option>)}
+            </select></div>
+          <button onClick={()=>onSave(form)} style={{ marginTop:8, padding:'10px', background:'var(--accent)', color:'white', border:'none', borderRadius:'var(--radius-sm)', fontWeight:500, fontSize:14 }}>
+            {tx ? 'Save Changes' : 'Add Transaction'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Dashboard({ transactions, isDark }) {
+  const totalIncome = transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const totalExpenses = transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const balance = totalIncome - totalExpenses;
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:12 }}>
+        <SummaryCard label="Total Balance" value={fmt(balance)} color={balance>=0?'var(--green)':'var(--red)'} icon="◈" sub={`${transactions.length} transactions`} />
+        <SummaryCard label="Total Income" value={fmt(totalIncome)} color="var(--green)" icon="↑" sub="All time income" />
+        <SummaryCard label="Total Expenses" value={fmt(totalExpenses)} color="var(--red)" icon="↓" sub="All time spending" />
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1.6fr) minmax(0,1fr)', gap:16 }}>
+        <TrendChart isDark={isDark} />
+        <PieChart transactions={transactions} isDark={isDark} />
+      </div>
+    </div>
+  );
+}
+
+function Transactions({ transactions, role, onAdd, onEdit, onDelete }) {
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [filterCat, setFilterCat] = useState('all');
+  const [sort, setSort] = useState({ key:'date', dir:'desc' });
+  const [editTx, setEditTx] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const filtered = useMemo(() => {
+    let arr = [...transactions];
+    if (search) arr = arr.filter(t => t.description.toLowerCase().includes(search.toLowerCase()) || t.category.toLowerCase().includes(search.toLowerCase()));
+    if (filterType !== 'all') arr = arr.filter(t => t.type === filterType);
+    if (filterCat !== 'all') arr = arr.filter(t => t.category === filterCat);
+    arr.sort((a,b) => {
+      let va = sort.key === 'date' ? new Date(a.date) : a.amount;
+      let vb = sort.key === 'date' ? new Date(b.date) : b.amount;
+      return sort.dir === 'asc' ? va - vb : vb - va;
+    });
+    return arr;
+  }, [transactions, search, filterType, filterCat, sort]);
+
+  const toggleSort = (key) => setSort(s => ({ key, dir: s.key===key && s.dir==='desc' ? 'asc' : 'desc' }));
+  const inpStyle = { padding:'8px 12px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:'var(--radius-sm)', color:'var(--text-primary)', outline:'none', fontSize:13 };
+
+  return (
+    <div>
+      {(showModal || editTx) && (
+        <TransactionModal
+          tx={editTx}
+          onClose={()=>{ setShowModal(false); setEditTx(null); }}
+          onSave={tx=>{ editTx ? onEdit({...tx, id:editTx.id, amount:parseFloat(tx.amount)}) : onAdd({...tx, amount:parseFloat(tx.amount), id:Date.now()}); setShowModal(false); setEditTx(null); }}
+          categories={CATEGORIES}
+        />
+      )}
+      <div style={{ display:'flex', flexWrap:'wrap', gap:10, marginBottom:16, alignItems:'center' }}>
+        <input style={{...inpStyle, flex:'1 1 200px'}} placeholder="🔍  Search transactions..." value={search} onChange={e=>setSearch(e.target.value)} />
+        <select style={inpStyle} value={filterType} onChange={e=>setFilterType(e.target.value)}>
+          <option value="all">All Types</option>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+        <select style={inpStyle} value={filterCat} onChange={e=>setFilterCat(e.target.value)}>
+          <option value="all">All Categories</option>
+          {CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
+        </select>
+        {role==='admin' && (
+          <button onClick={()=>setShowModal(true)} style={{ padding:'8px 16px', background:'var(--accent)', color:'white', border:'none', borderRadius:'var(--radius-sm)', fontWeight:500, fontSize:13, whiteSpace:'nowrap' }}>+ Add Transaction</button>
+        )}
+      </div>
+      {filtered.length === 0 ? (
+        <div style={{ textAlign:'center', padding:'60px 20px', color:'var(--text-muted)', background:'var(--surface)', borderRadius:'var(--radius)', border:'1px solid var(--border)' }}>
+          <div style={{ fontSize:40, marginBottom:12 }}>◎</div>
+          <div style={{ fontWeight:500, marginBottom:6 }}>No transactions found</div>
+          <div style={{ fontSize:12 }}>Try adjusting your search or filters</div>
+        </div>
+      ) : (
+        <div style={{ background:'var(--surface)', borderRadius:'var(--radius)', border:'1px solid var(--border)', overflow:'hidden', boxShadow:'var(--shadow)' }}>
+          <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', minWidth:520 }}>
+              <thead>
+                <tr style={{ borderBottom:'1px solid var(--border)' }}>
+                  {[['Date','date'],['Description',null],['Category',null],['Type',null],['Amount','amount']].map(([h,sk])=>(
+                    <th key={h} onClick={sk?()=>toggleSort(sk):undefined} style={{ padding:'12px 16px', textAlign:'left', fontSize:11, fontWeight:600, color:'var(--text-muted)', letterSpacing:'0.05em', textTransform:'uppercase', cursor:sk?'pointer':'default', userSelect:'none', whiteSpace:'nowrap' }}>
+                      {h} {sk && sort.key===sk ? (sort.dir==='desc'?'↓':'↑') : ''}
+                    </th>
+                  ))}
+                  {role==='admin' && <th style={{ padding:'12px 16px', fontSize:11, fontWeight:600, color:'var(--text-muted)', letterSpacing:'0.05em', textTransform:'uppercase' }}>Actions</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((tx,i)=>(
+                  <tr key={tx.id} style={{ borderBottom:i<filtered.length-1?'1px solid var(--border)':'none', transition:'background 0.1s' }}
+                    onMouseEnter={e=>e.currentTarget.style.background='var(--surface2)'}
+                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <td style={{ padding:'13px 16px', fontSize:12, color:'var(--text-secondary)', whiteSpace:'nowrap', fontFamily:'DM Mono' }}>{fmtDate(tx.date)}</td>
+                    <td style={{ padding:'13px 16px', fontWeight:500, fontSize:13, color:'var(--text-primary)' }}>{tx.description}</td>
+                    <td style={{ padding:'13px 16px' }}>
+                      <span style={{ display:'inline-flex', alignItems:'center', fontSize:12, color:'var(--text-secondary)' }}>
+                        <CategoryDot cat={tx.category} />{tx.category}
+                      </span>
+                    </td>
+                    <td style={{ padding:'13px 16px' }}><Badge type={tx.type} /></td>
+                    <td style={{ padding:'13px 16px', fontFamily:'DM Mono', fontWeight:600, fontSize:14, color:tx.type==='income'?'var(--green)':'var(--red)', whiteSpace:'nowrap' }}>
+                      {tx.type==='income'?'+':'-'}{fmt(tx.amount)}
+                    </td>
+                    {role==='admin' && (
+                      <td style={{ padding:'13px 16px' }}>
+                        <div style={{ display:'flex', gap:6 }}>
+                          <button onClick={()=>setEditTx(tx)} style={{ padding:'4px 10px', background:'var(--accent-light)', color:'var(--accent)', border:'1px solid var(--accent)', borderRadius:6, fontSize:11, fontWeight:500 }}>Edit</button>
+                          <button onClick={()=>onDelete(tx.id)} style={{ padding:'4px 10px', background:'var(--red-light)', color:'var(--red)', border:`1px solid var(--red)`, borderRadius:6, fontSize:11, fontWeight:500 }}>Del</button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ padding:'12px 16px', borderTop:'1px solid var(--border)', fontSize:12, color:'var(--text-muted)', display:'flex', justifyContent:'space-between' }}>
+            <span>Showing {filtered.length} of {transactions.length} transactions</span>
+            <span>{fmt(filtered.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0))} in / {fmt(filtered.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0))} out</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Insights({ transactions }) {
+  const expTxns = transactions.filter(t=>t.type==='expense');
+  const incTxns = transactions.filter(t=>t.type==='income');
+
+  const byCat = CATEGORIES.map(cat=>({ cat, total:expTxns.filter(t=>t.category===cat).reduce((s,t)=>s+t.amount,0) })).filter(x=>x.total>0).sort((a,b)=>b.total-a.total);
+  const topCat = byCat[0];
+
+  const getMonthTotals = (txns, m) => txns.filter(t=>new Date(t.date).getMonth()===m).reduce((s,t)=>s+t.amount,0);
+  const now = new Date();
+  const curM = now.getMonth();
+  const prevM = (curM-1+12)%12;
+  const curExpenses = getMonthTotals(expTxns, curM);
+  const prevExpenses = getMonthTotals(expTxns, prevM);
+  const expChange = prevExpenses > 0 ? ((curExpenses-prevExpenses)/prevExpenses*100).toFixed(1) : 0;
+  const curIncome = getMonthTotals(incTxns, curM);
+  const prevIncome = getMonthTotals(incTxns, prevM);
+  const incChange = prevIncome > 0 ? ((curIncome-prevIncome)/prevIncome*100).toFixed(1) : 0;
+  const savingsRate = curIncome > 0 ? (((curIncome-curExpenses)/curIncome)*100).toFixed(1) : 0;
+  const avgTx = expTxns.length > 0 ? (expTxns.reduce((s,t)=>s+t.amount,0)/expTxns.length).toFixed(2) : 0;
+
+  const cards = [
+    { label:'Highest Spending Category', value:topCat?.cat||'—', sub:topCat?fmt(topCat.total)+' total':'No expenses', color:'var(--amber)', icon:'◉', bg:'var(--amber-light)' },
+    { label:'Monthly Expense Change', value:(expChange>=0?'+':'')+expChange+'%', sub:`${fmt(prevExpenses)} → ${fmt(curExpenses)}`, color:expChange>0?'var(--red)':'var(--green)', icon:'⬡', bg:expChange>0?'var(--red-light)':'var(--green-light)' },
+    { label:'Monthly Income Change', value:(incChange>=0?'+':'')+incChange+'%', sub:`${fmt(prevIncome)} → ${fmt(curIncome)}`, color:incChange>=0?'var(--green)':'var(--red)', icon:'◈', bg:incChange>=0?'var(--green-light)':'var(--red-light)' },
+    { label:'Savings Rate (This Month)', value:savingsRate+'%', sub:`Saved ${fmt(Math.max(0,curIncome-curExpenses))}`, color:'var(--teal)', icon:'◎', bg:'var(--teal-light)' },
+    { label:'Avg. Transaction (Expenses)', value:fmt(avgTx), sub:`Over ${expTxns.length} expenses`, color:'var(--purple)', icon:'⬡', bg:'var(--purple-light)' },
+    { label:'Total Transactions', value:transactions.length, sub:`${incTxns.length} income, ${expTxns.length} expenses`, color:'var(--accent)', icon:'◇', bg:'var(--accent-light)' },
+  ];
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:12 }}>
+        {cards.map((c,i)=>(
+          <div key={i} style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius)', padding:'20px', boxShadow:'var(--shadow)' }}>
+            <div style={{ width:36, height:36, borderRadius:10, background:c.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, marginBottom:12, color:c.color }}>{c.icon}</div>
+            <div style={{ fontSize:11, fontWeight:600, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:6 }}>{c.label}</div>
+            <div style={{ fontSize:22, fontWeight:600, color:c.color, fontFamily:'DM Mono', letterSpacing:'-0.02em', marginBottom:4 }}>{c.value}</div>
+            <div style={{ fontSize:11, color:'var(--text-muted)' }}>{c.sub}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius)', padding:'24px', boxShadow:'var(--shadow)' }}>
+        <div style={{ fontWeight:600, fontSize:15, marginBottom:4 }}>Spending by Category</div>
+        <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:20 }}>All time expense breakdown</div>
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          {byCat.slice(0,7).map(x=>{
+            const pct = (x.total/byCat.reduce((s,y)=>s+y.total,0)*100).toFixed(1);
+            return (
+              <div key={x.cat}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5, fontSize:12 }}>
+                  <span style={{ display:'flex', alignItems:'center', gap:6, color:'var(--text-secondary)' }}><CategoryDot cat={x.cat} />{x.cat}</span>
+                  <span style={{ fontFamily:'DM Mono', fontWeight:500, color:'var(--text-primary)' }}>{fmt(x.total)} <span style={{ color:'var(--text-muted)', fontWeight:400 }}>({pct}%)</span></span>
+                </div>
+                <div style={{ height:6, background:'var(--border)', borderRadius:99, overflow:'hidden' }}>
+                  <div style={{ height:'100%', width:pct+'%', background:CAT_COLORS[x.cat]||'#888', borderRadius:99 }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [isDark, setIsDark] = useState(false);
+  const [role, setRole] = useState('admin');
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [transactions, setTransactions] = useState(() => {
+    try { const s = localStorage.getItem('finflow_txns'); return s ? JSON.parse(s) : initialTransactions; }
+    catch { return initialTransactions; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('finflow_txns', JSON.stringify(transactions)); } catch {}
+  }, [transactions]);
+
+  useEffect(() => {
+    document.documentElement.className = isDark ? 'dark' : '';
+  }, [isDark]);
+
+  const addTx = useCallback(tx => setTransactions(p=>[tx,...p]), []);
+  const editTx = useCallback(tx => setTransactions(p=>p.map(t=>t.id===tx.id?tx:t)), []);
+  const deleteTx = useCallback(id => setTransactions(p=>p.filter(t=>t.id!==id)), []);
+
+  const exportCSV = () => {
+    const h = ['id','date','description','amount','type','category'];
+    const rows = transactions.map(t=>h.map(k=>t[k]).join(','));
+    const blob = new Blob([h.join(',')+'\n'+rows.join('\n')], {type:'text/csv'});
+    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='transactions.csv'; a.click();
+  };
+
+  const tabs = [
+    { id:'dashboard', label:'Dashboard' },
+    { id:'transactions', label:'Transactions' },
+    { id:'insights', label:'Insights' },
+  ];
+
+  return (
+    <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
+      <nav style={{ background:'var(--surface)', borderBottom:'1px solid var(--border)', padding:'0 24px', position:'sticky', top:0, zIndex:100 }}>
+        <div style={{ maxWidth:1200, margin:'0 auto', display:'flex', alignItems:'center', height:56, gap:16 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginRight:16 }}>
+            <div style={{ width:28, height:28, borderRadius:8, background:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, color:'white', fontWeight:700 }}>F</div>
+            <span style={{ fontWeight:700, fontSize:15, letterSpacing:'-0.01em' }}>FinFlow</span>
+          </div>
+          <div style={{ display:'flex', gap:2, flex:1, overflowX:'auto' }}>
+            {tabs.map(t=>(
+              <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{
+                padding:'6px 14px', borderRadius:8, border:'none', fontSize:13, fontWeight:activeTab===t.id?600:400,
+                background:activeTab===t.id?'var(--accent-light)':'transparent', color:activeTab===t.id?'var(--accent)':'var(--text-secondary)',
+                whiteSpace:'nowrap'
+              }}>{t.label}</button>
+            ))}
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginLeft:'auto', flexShrink:0 }}>
+            <select value={role} onChange={e=>setRole(e.target.value)} style={{ padding:'5px 10px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, color:'var(--text-primary)', fontSize:12, fontWeight:500 }}>
+              <option value="admin">Admin</option>
+              <option value="viewer">Viewer</option>
+            </select>
+            <button onClick={exportCSV} title="Export CSV" style={{ padding:'6px 10px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, color:'var(--text-secondary)', fontSize:12, whiteSpace:'nowrap' }}>↓ CSV</button>
+            <button onClick={()=>setIsDark(d=>!d)} style={{ width:34, height:34, borderRadius:8, background:'var(--surface2)', border:'1px solid var(--border)', color:'var(--text-secondary)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>{isDark?'☀':'☾'}</button>
+          </div>
+        </div>
+      </nav>
+      {role==='viewer' && (
+        <div style={{ background:'var(--amber-light)', borderBottom:'1px solid var(--amber)', padding:'8px 24px', textAlign:'center', fontSize:12, color:'var(--amber)', fontWeight:500 }}>
+          👁 Viewer mode — read only. Switch to Admin to add or edit transactions.
+        </div>
+      )}
+      <main style={{ maxWidth:1200, margin:'0 auto', padding:'24px 16px' }}>
+        {activeTab==='dashboard' && <Dashboard transactions={transactions} isDark={isDark} />}
+        {activeTab==='transactions' && <Transactions transactions={transactions} role={role} onAdd={addTx} onEdit={editTx} onDelete={deleteTx} />}
+        {activeTab==='insights' && <Insights transactions={transactions} />}
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
